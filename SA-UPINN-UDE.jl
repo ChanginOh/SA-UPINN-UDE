@@ -4,9 +4,18 @@ using SciMLBase: ODEProblem, solve, successful_retcode
 using SciMLSensitivity
 using Random, Statistics, Dates
 
-# =============================
+# ==================================================
+# SA-UPINN with UDE Refinement (SA-UPINN-UDE)
+#
+# Author: Changin Oh
+# Date: November 25, 2026
+# Publication: Manuscript in preparation.
+# GitHub: https://github.com/ChanginOh
+# ==================================================
+
+# ==================================================
 # 1. User settings
-# =============================
+# ==================================================
 # Set random seed for reproducibility
 Random.seed!(9999)
 
@@ -44,9 +53,9 @@ function maskFunction(omega)
     return 1*omega^3
 end
 
-# =============================
+# ==================================================
 # 2. Dataset
-# =============================
+# ==================================================
 # Load the dataset and sort by time
 dataTable = CSV.read(joinpath(@__DIR__, "Dataset", "UT_mean.csv"), DataFrame)
 sort!(dataTable, :Time)
@@ -72,9 +81,9 @@ if useSAWeighting
     adaptiveWeights = rand(Float64, length(resistantPercentages), numColPoints + 1)
 end
 
-# =============================
+# ==================================================
 # 3. Neural networks
-# =============================
+# ==================================================
 # Define solution neural networks for each resistant percentage
 solutionNetworks = Tuple(Flux.f64(Chain(Dense(1 => numNeuronsSolutionNN, tanh), (Dense(numNeuronsSolutionNN => numNeuronsSolutionNN, tanh) for _ in 2:numHiddenLayers)..., Dense(numNeuronsSolutionNN => 2))) for _ in resistantPercentages)
 
@@ -83,9 +92,9 @@ interactionNetwork = Flux.f64(Chain(Dense(2 => numNeuronsInteractionNN, tanh), (
 
 neuralNetworks = (solutionNetworks=solutionNetworks, interactionNetwork=interactionNetwork)
 
-# =============================
+# ==================================================
 # 4. ODE model
-# =============================
+# ==================================================
 # Define ODE parameters for untreated tumour growth
 rₛ, rᵣ = 0.03267820555398815, 0.03384136479474916
 Kₛ, Kᵣ = 1.106440597333263, 0.7412391064500214
@@ -99,9 +108,9 @@ function tumourODE(u, p, t)
     return [rₛ * S * (1 - S / Kₛ) + interactionTerms[1], rᵣ * R * (1 - R / Kᵣ) + interactionTerms[2]]
 end
 
-# =============================
+# ==================================================
 # 5. Loss functions
-# =============================
+# ==================================================
 function loss(networks, adaptiveWeights=nothing; returnComponents=false)
     totalError = 0.0
     totalDataError, totalRawDataError = 0.0, 0.0
@@ -193,9 +202,9 @@ function udeLoss(parameters, rebuildInteraction, data)
     return total / length(data.observedCells)
 end
 
-# =============================
+# ==================================================
 # 6. Adam training
-# =============================
+# ==================================================
 # Set up Adam optimizers for solution NNs and adaptive weights
 adamState = Flux.setup(Flux.Adam(adamLearningRate), neuralNetworks)
 saAdamState = useSAWeighting ? Flux.setup(Flux.Adam(saLearningRate), adaptiveWeights) : nothing
@@ -268,9 +277,9 @@ else
     interactionNN = neuralNetworks.interactionNetwork
 end
 
-# =============================
+# ==================================================
 # 8. Training summary
-# =============================
+# ==================================================
 weightInfo = useSAWeighting ? "SA weighting" : "Fixed loss weights: Data = $(dataLossWeight), ODE = $(odeLossWeight), IC = $(icLossWeight)"
 
 lossInfo = loss(neuralNetworks, adaptiveWeights; returnComponents=true)
@@ -293,9 +302,9 @@ end
 
 println(trainingInfo)
 
-# =============================
+# ==================================================
 # 9. Interaction network parameter saving
-# =============================
+# ==================================================
 outputDirectory = joinpath(@__DIR__, "Results")
 mkpath(outputDirectory)
 
