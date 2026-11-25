@@ -4,7 +4,7 @@ A two-stage scientific machine learning framework for discovering unknown terms 
 
 ## Publication
 
-Manuscript in preparation.
+Manuscript in preparation. See [flowchart.pdf](./flowchart.pdf) for a schematic overview of the algorithm.
 
 ## Data Source
 
